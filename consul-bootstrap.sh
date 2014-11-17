@@ -11,24 +11,28 @@
 # and progrium's start script from progrium/consul
 
 bridge_ip="$(ip ro | awk '/^default/{print $3}')"
-echo "bridge_ip =" $bridge_ip
-
-machines=$(etcdctl --peers $bridge_ip:4001 ls /consul.io/bootstrap/machines 2>/dev/null)
 private_ip=$COREOS_PRIVATE_IPV4
-
-echo "machines =" $machines
+echo "bridge_ip =" $bridge_ip
 echo "private_ip =" $private_ip
 
-if [ -z "$machines" ];
-then
-  echo "First machine, setting consul bootstrap flag"
-  flags="-bootstrap"
-else
-  echo "This cluster has already been bootstrapped"
+# Atomically determine if we're the first to bootstrap
+curl -L --fail http://$bridge_ip:4001/v2/keys/consul.io/bootstrap/bootstrapped?prevExist=false -XPUT -d value=$private_ip
+if [ $? != 0 ]; then
+  # Another node won the race, assume joining with the rest.
+  echo "Not first machine, joining others..."
+  first="-join $(etcdctl --peers $bridge_ip:4001 get /consul.io/bootstrap/bootstrapped)"
+  echo "first =" $first
+
   flags=$(etcdctl --peers $bridge_ip:4001 ls /consul.io/bootstrap/machines | while read line; do
           ip=$(etcdctl --peers $bridge_ip:4001 get ${line})
           echo -join ${ip}
         done)
+
+  flags="$first $flags"
+else
+  # We're the first to bootstrap.
+  echo "First machine, setting consul bootstrap flag..."
+  flags="-bootstrap"
 fi
 
 echo "Flags are:" $flags
@@ -38,12 +42,12 @@ etcdctl --peers $bridge_ip:4001 set /consul.io/bootstrap/machines/$HOSTNAME $pri
 echo "Writing environment.consul..."
 cat > /etc/env.d/environment.consul <<EOF
 CONSUL_PORTS="-p $private_ip:8300:8300 \
-              -p $private_ip:8301:8301 \
-              -p $private_ip:8301:8301/udp \
-              -p $private_ip:8302:8302 \
-              -p $private_ip:8302:8302/udp \
-              -p $private_ip:8400:8400 \
-              -p $private_ip:8500:8500 \
-              -p $bridge_ip:53:53/udp"
+-p $private_ip:8301:8301 \
+-p $private_ip:8301:8301/udp \
+-p $private_ip:8302:8302 \
+-p $private_ip:8302:8302/udp \
+-p $private_ip:8400:8400 \
+-p $private_ip:8500:8500 \
+-p $bridge_ip:53:53/udp"
 CONSUL_FLAGS="${flags}"
 EOF
