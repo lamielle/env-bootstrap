@@ -20,19 +20,23 @@ curl -L --fail http://$bridge_ip:4001/v2/keys/consul.io/bootstrap/bootstrapped?p
 if [ $? != 0 ]; then
   # Another node won the race, assume joining with the rest.
   echo "Not first machine, joining others..."
-  first="-join $(etcdctl --peers $bridge_ip:4001 get /consul.io/bootstrap/bootstrapped)"
+  export first="$(etcdctl --peers $bridge_ip:4001 get --consistent /consul.io/bootstrap/bootstrapped)"
   echo "first =" $first
 
-  flags=$(etcdctl --peers $bridge_ip:4001 ls /consul.io/bootstrap/machines | while read line; do
-          ip=$(etcdctl --peers $bridge_ip:4001 get ${line})
-          echo -join ${ip}
+  others=$(etcdctl --peers $bridge_ip:4001 ls /consul.io/bootstrap/machines | while read line; do
+          ip=$(etcdctl --peers $bridge_ip:4001 get --consistent ${line})
+          if [ "${ip}" != "${first}" ]; then
+            echo -n "-join ${ip} "
+          fi
         done)
 
-  flags="$first $flags"
+  flags="-join $first $others"
+  bootstrap=""
 else
   # We're the first to bootstrap.
   echo "First machine, setting consul bootstrap flag..."
-  flags="-bootstrap"
+  flags=""
+  bootstrap="-bootstrap"
 fi
 
 echo "Flags are:" $flags
@@ -49,5 +53,6 @@ CONSUL_PORTS="-p $private_ip:8300:8300 \
 -p $private_ip:8400:8400 \
 -p $private_ip:8500:8500 \
 -p $bridge_ip:53:53/udp"
-CONSUL_FLAGS="${flags}"
+CONSUL_BOOTSTRAP="${bootstrap}"
+CONSUL_JOIN="${flags}"
 EOF
