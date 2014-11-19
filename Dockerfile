@@ -1,7 +1,7 @@
 FROM progrium/busybox:latest
 MAINTAINER Alan LaMielle <alan.lamielle@gmail.com>
 
-RUN opkg-install curl bind-utils
+RUN opkg-install curl bind-tools
 
 VOLUME ["/etc/env.d"]
 CMD ["/bin/consul-bootstrap.sh"]
