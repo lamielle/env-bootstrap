@@ -10,7 +10,7 @@
 #
 # and progrium's start script from progrium/consul
 
-bridge_ip="$(ip ro | awk '/^default/{print $3}')"
+bridge_ip="$(ip route | awk '/^default/{print $3}')"
 private_ip=$COREOS_PRIVATE_IPV4
 echo "bridge_ip =" $bridge_ip
 echo "private_ip =" $private_ip
