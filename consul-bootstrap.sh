@@ -26,11 +26,11 @@ if [ $? != 0 ]; then
   others=$(etcdctl --peers $bridge_ip:4001 ls /consul.io/bootstrap/machines | while read line; do
           ip=$(etcdctl --peers $bridge_ip:4001 get --consistent ${line})
           if [ "${ip}" != "${first}" ]; then
-            echo -n "-join ${ip} "
+            echo -n "-retry-join ${ip} "
           fi
         done)
 
-  flags="-join $first $others"
+  flags="-retry-join $first $others"
   bootstrap=""
 else
   # We're the first to bootstrap.
