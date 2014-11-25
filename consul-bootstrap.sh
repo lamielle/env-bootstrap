@@ -41,7 +41,7 @@ fi
 
 echo "Flags are:" $flags
 
-if [ $1 == "--server" ]; then
+if [ "$1" == "--server" ]; then
   etcdctl --peers $bridge_ip:4001 set /consul.io/bootstrap/machines/$HOSTNAME $private_ip >/dev/null
 fi
 
