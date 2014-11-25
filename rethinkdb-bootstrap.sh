@@ -39,7 +39,10 @@ fi
 
 echo "Joins are:" $joins
 
-etcdctl --peers $bridge_ip:4001 set /rethinkdb.com/bootstrap/machines/$HOSTNAME $private_ip >/dev/null
+
+if [ "$1" == "--server" ]; then
+  etcdctl --peers $bridge_ip:4001 set /rethinkdb.com/bootstrap/machines/$HOSTNAME $private_ip >/dev/null
+fi
 
 echo "Writing environment.rethinkdb"
 cat > /etc/env.d/environment.rethinkdb <<EOF
