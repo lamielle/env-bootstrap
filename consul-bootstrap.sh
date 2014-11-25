@@ -41,7 +41,9 @@ fi
 
 echo "Flags are:" $flags
 
-etcdctl --peers $bridge_ip:4001 set /consul.io/bootstrap/machines/$HOSTNAME $private_ip >/dev/null
+if [ $1 == "--server" ]; then
+  etcdctl --peers $bridge_ip:4001 set /consul.io/bootstrap/machines/$HOSTNAME $private_ip >/dev/null
+fi
 
 echo "Writing environment.consul..."
 cat > /etc/env.d/environment.consul <<EOF
