@@ -17,7 +17,7 @@ echo "service_host =" $service_host
 echo "service_port =" $service_port
 
 if [ "$2" == "reverse" ]; then
-  service_host=$(dig -x $service_host | sed -e 's/\(.*\)\.$/\1/')
+  service_host=$(dig -x $service_host +short | sed -e 's/\(.*\)\.$/\1/')
   echo "service_host (after reverse) =" $service_host
 fi
 
