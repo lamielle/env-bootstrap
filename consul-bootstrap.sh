@@ -12,20 +12,22 @@
 
 bridge_ip="$(ip route | awk '/^default/{print $3}')"
 private_ip=$COREOS_PRIVATE_IPV4
+etcd_root="http://$bridge_ip:4001/v2"
 echo "bridge_ip =" $bridge_ip
 echo "private_ip =" $private_ip
+echo "etcd_root =" $etcd_root
 
 # Atomically determine if we're the first to bootstrap
-curl -L --fail http://$bridge_ip:4001/v2/keys/consul.io/bootstrap/bootstrapped?prevExist=false -XPUT -d value=$private_ip
+curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped?prevExist=false -XPUT -d value=$private_ip >/dev/null 2>&1
 if [ $? != 0 ]; then
   # Another node won the race, assume joining with the rest.
   echo "Not first machine, joining others..."
-  export first="$(etcdctl --peers $bridge_ip:4001 get --consistent /consul.io/bootstrap/bootstrapped)"
+  export first="$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped?quorum=true 2>/dev/null | jq '.node.value' | tr -d '\"')"
   echo "first =" $first
 
-  others=$(etcdctl --peers $bridge_ip:4001 ls /consul.io/bootstrap/machines | while read line; do
-          ip=$(etcdctl --peers $bridge_ip:4001 get --consistent ${line})
-          if [ "${ip}" != "${first}" ]; then
+  others=$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/machines/?quorum=true 2>/dev/null | jq '.node.nodes[].key' | while read line; do
+          ip=$(curl -L --fail $etcd_root/keys/${line}?quorum=true 2>/dev/null | jq '.node.value' | tr -d '\"')
+          if [[ "${ip}" != "" && "${ip}" != "${first}" ]]; then
             echo -n "-retry-join ${ip} "
           fi
         done)
@@ -40,9 +42,13 @@ else
 fi
 
 echo "Flags are:" $flags
+echo "Bootstrap is:" $bootstrap
 
 if [ "$1" == "--server" ]; then
-  etcdctl --peers $bridge_ip:4001 set /consul.io/bootstrap/machines/$HOSTNAME $private_ip >/dev/null
+  curl -L --fail $etcd_root/keys/consul.io/bootstrap/machines/$HOSTNAME -XPUT -d value=$private_ip >/dev/null 2>&1
+  if [ "$?" != 0 ]; then
+    echo "Failed to write IP $private_ip for $HOSTNAME to etcd"
+  fi
 fi
 
 echo "Writing environment.consul..."
