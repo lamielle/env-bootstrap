@@ -7,6 +7,6 @@ RUN chmod 0755 /usr/local/bin/jq
 
 VOLUME ["/etc/env.d"]
 
-ADD consul-bootstrap.sh /bin/
-ADD rethinkdb-bootstrap.sh /bin/
-ADD discover-service.sh /bin/
+ADD consul-bootstrap /bin/
+ADD rethinkdb-bootstrap /bin/
+ADD discover /bin/
