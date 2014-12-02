@@ -16,6 +16,10 @@ echo "SERVICE_NAME =" $SERVICE_NAME
 echo "service_host =" $service_host
 echo "service_port =" $service_port
 
+if [ "$2" == "reverse" ]; then
+  service_host=$(dig -x $service_host | sed -e 's/\(.*\)\.$/\1/')
+fi
+
 echo "Writing environment.${service_name}"
 cat > /etc/env.d/environment.${service_name} <<EOF
 ${SERVICE_NAME}_HOST=${service_host}
