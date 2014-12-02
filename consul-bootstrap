@@ -22,7 +22,12 @@ curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped?prevExist=false 
 if [ $? != 0 ]; then
   # Another node won the race, assume joining with the rest.
   echo "Not first machine, joining others..."
-  export first="$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped?quorum=true 2>/dev/null | jq '.node.value' | tr -d '\"')"
+
+  export first=""
+  while [ "$first" == "" ]; do
+    echo "Reading IP of bootstrap node..."
+    export first="$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped?quorum=true 2>/dev/null | jq '.node.value' | tr -d '\"')"
+  done
   echo "first =" $first
 
   others=$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/machines/?quorum=true 2>/dev/null | jq '.node.nodes[].key' | while read line; do
