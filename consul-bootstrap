@@ -26,12 +26,13 @@ if [ $? != 0 ]; then
   export first=""
   while [ "$first" == "" ]; do
     echo "Reading IP of bootstrap node..."
-    export first="$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped?quorum=true 2>/dev/null | jq '.node.value' | tr -d '\"')"
+    export first="$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/bootstrapped 2>/dev/null | jq '.node.value' | tr -d '\"')"
+    sleep 5
   done
   echo "first =" $first
 
-  others=$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/machines/?quorum=true 2>/dev/null | jq '.node.nodes[].key' | while read line; do
-          ip=$(curl -L --fail $etcd_root/keys/${line}?quorum=true 2>/dev/null | jq '.node.value' | tr -d '\"')
+  others=$(curl -L --fail $etcd_root/keys/consul.io/bootstrap/machines/ 2>/dev/null | jq '.node.nodes[].key' | while read line; do
+          ip=$(curl -L --fail $etcd_root/keys/${line} 2>/dev/null | jq '.node.value' | tr -d '\"')
           if [[ "${ip}" != "" && "${ip}" != "${first}" ]]; then
             echo -n "-retry-join ${ip} "
           fi
